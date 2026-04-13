@@ -1,30 +1,19 @@
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from peft import PeftModel
 
-ADAPTER_PATH = './lora-adapter'
-BASE_MODEL   = 'mistralai/Mistral-7B-v0.3'
+MODEL_ID = "google/flan-t5-small"
 
-PROMPT = '### Question: {question}\n### Context: {context}\n### Answer:'
+PROMPT = "Answer this question: {question}\nContext: {context}\nAnswer:"
 
 def load_model():
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_PATH)
-    base = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL, torch_dtype=torch.float16, device_map='auto'
-    )
-    model = PeftModel.from_pretrained(base, ADAPTER_PATH)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+    model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_ID)
     model.eval()
     return model, tokenizer
 
 def generate(model, tokenizer, question, context, max_new_tokens=256):
-    prompt = PROMPT.format(question=question, context=context[:1024])
-    inputs = tokenizer(prompt, return_tensors='pt').to(model.device)
+    prompt = PROMPT.format(question=question, context=context[:512])
+    inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
     with torch.no_grad():
-        out = model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            do_sample=False,
-            pad_token_id=tokenizer.eos_token_id
-        )
-    decoded = tokenizer.decode(out[0], skip_special_tokens=True)
-    return decoded.split('### Answer:')[-1].strip()
+        out = model.generate(**inputs, max_new_tokens=max_new_tokens)
+    return tokenizer.decode(out[0], skip_special_tokens=True)
