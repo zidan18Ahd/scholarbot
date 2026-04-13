@@ -1,3 +1,4 @@
+**Live demo:** https://zan18a-scholarbot.hf.space/docs
 ---
 title: Scholarbot
 emoji: 🎓
